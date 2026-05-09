@@ -148,28 +148,42 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   }
 @media(max-width:700px){
 
-  /* hide mobile menu bar */
+  /* show top bar in mobile */
   .mobile-topbar{
-    display:none !important;
+    display:flex !important;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    background:var(--bg2);
+    border-bottom:1px solid var(--border);
+    position:sticky;
+    top:0;
+    z-index:3000;
   }
 
-  /* sidebar always visible like laptop */
+  /* sidebar hidden by default */
   .sidebar{
-    position:fixed !important;
-    left:0 !important;
-    top:0 !important;
-    height:100vh !important;
-    width:240px !important;
-    transform:none !important;
-    z-index:2000 !important;
-    box-shadow:none !important;
+    position:fixed;
+    top:0;
+    left:0;
+    height:100vh;
+    width:240px;
+    transform:translateX(-100%);
+    transition:0.25s;
+    z-index:4000;
   }
 
-  /* main content shifted right */
+  /* sidebar open */
+  .sidebar.open{
+    transform:translateX(0);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
+  }
+
+  /* main full width */
   .main{
-    margin-left:240px !important;
-    width:calc(100% - 240px) !important;
-    max-width:calc(100% - 240px) !important;
+    margin-left:0 !important;
+    width:100% !important;
+    max-width:100% !important;
   }
 }
 }
@@ -196,6 +210,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <button class="menu-btn" onclick="toggleSidebar()">
     <i class="ti ti-menu-2"></i>
   </button>
+
+  <div class="mtitle">Shantilal Construction</div>
 </div>
 
 <div id="page-dashboard" class="page active">
@@ -1168,6 +1184,9 @@ function globalSearch(){
   ${list.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);const ip=ss[w.siteId]==='pending';return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft</span></td><td>${fmtN(w.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td><td><span class="badge ${ip?'badger':'badgeg'}">${ip?'Pending':'Paid'}</span></td></tr>`;}).join('')}</tbody></table></div>`;
 }
 
+function toggleSidebar(){
+  document.querySelector('.sidebar').classList.toggle('open');
+}
 // ── SEED ──
 function seedDemo(){
   if(DB.clients().length)return;
