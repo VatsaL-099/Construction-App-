@@ -146,7 +146,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <div class="sidebar" id="sidebar">
-  <div class="logo"><h2>Shanti Construction</h2><p>Chetan Dhanani</p></div>
+  <div class="logo"><h2>Shantilal Construction</h2><p>Chetan Dhanani</p></div>
   <nav class="nav">
     <button class="nav-item active" onclick="nav('dashboard')"><i class="ti ti-dashboard"></i><span>Dashboard</span></button>
     <button class="nav-item" onclick="nav('clients')"><i class="ti ti-users"></i><span>Clients</span></button>
@@ -161,7 +161,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <div class="mobile-topbar">
   <button class="menu-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
-  <div class="mtitle">Shanti Construction</div>
+  <div class="mtitle">Shantilal Construction</div>
 </div>
 
 <div class="main">
@@ -457,7 +457,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
     <div style="text-align:center;margin-bottom:28px">
       <div style="font-size:36px;margin-bottom:8px">🏗</div>
-      <h1 style="font-size:22px;font-weight:800;color:var(--accent)">Shanti Construction</h1>
+      <h1 style="font-size:22px;font-weight:800;color:var(--accent)">Shantilal Construction</h1>
       <p style="font-size:13px;color:var(--text3);margin-top:4px">PlateTracker — Cloud Sync</p>
     </div>
     <div id="login-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px"></div>
@@ -507,7 +507,7 @@ enableIndexedDbPersistence(db).catch(e=>{
 });
 
 // ══ IN-MEMORY CACHE (instant reads, no lag) ══
-const CACHE = { clients:[], sites:[], works:[], payments:[] };
+const CACHE = { clients:[], sites:[], works:[], payments:[], bills:[] };
 
 // ══ DB LAYER — drop-in replacement for old localStorage DB ══
 const DB = {
@@ -515,6 +515,7 @@ const DB = {
   sites()    { return CACHE.sites    },
   works()    { return CACHE.works    },
   payments() { return CACHE.payments },
+  bills()    { return CACHE.bills    },
 
   async set(col, id, data) {
     showSync('saving');
@@ -569,7 +570,7 @@ function attachListeners(uid) {
   unsubs.forEach(u=>u());
   unsubs.length=0;
 
-  const cols = ['clients','sites','works','payments'];
+  const cols = ['clients','sites','works','payments','bills'];
   cols.forEach(col => {
     const q = query(collection(db, col), orderBy('createdAt','asc'));
     const unsub = onSnapshot(q, snap => {
@@ -589,6 +590,7 @@ function refreshCurrentPage() {
   else if(CUR==='payments') renderPayments();
   else if(CUR==='reports') { /* user is actively filtering — don't auto-refresh */ }
   else if(CUR==='search') globalSearch();
+  else if(CUR==='bill') loadSavedBills();
 }
 
 // ══ AUTH ══
@@ -1133,6 +1135,12 @@ function nav_bill_init(){
   if(logoEl){ logoEl.src = LOGO_URI; logoEl.style.display = 'block'; }
   if(LEDGER_ROWS.length === 0){ addLedgerRow('issue'); }
   renderLedgerForm();
+  // Show loading state while Firebase syncs bills
+  const el = document.getElementById('saved-bills-list');
+  const cnt = document.getElementById('saved-bills-count');
+  if(el && CACHE.bills.length === 0){
+    el.innerHTML='<div style="text-align:center;padding:24px;color:var(--text3)"><div style="display:inline-block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:8px"></div><br>Loading saved bills...</div>';
+  }
   loadSavedBills();
   renderLedger();
 }
@@ -1506,34 +1514,58 @@ function doPrint(){
   setTimeout(()=>win.print(), 400);
 }
 
-function saveBillRecord(){
+async function saveBillRecord(){
   if(!BILL_DATA) return;
-  const bills = JSON.parse(localStorage.getItem('pt_bills')||'[]');
-  bills.unshift({...BILL_DATA, id:uid()});
-  localStorage.setItem('pt_bills', JSON.stringify(bills));
+  const id = uid();
+  const calcResult = calcBill();
+  // Build a clean serializable copy (no nested functions/objects)
+  const billToSave = {
+    id,
+    billNum: BILL_DATA.billNum || ('INV-'+Date.now().toString().slice(-6)),
+    company: BILL_DATA.company||'',
+    companyPhone: BILL_DATA.companyPhone||'',
+    companyAddr: BILL_DATA.companyAddr||'',
+    cname: BILL_DATA.cname||'',
+    cphone: BILL_DATA.cphone||'',
+    material: BILL_DATA.material||'',
+    site: BILL_DATA.site||'',
+    issueDate: BILL_DATA.issueDate||'',
+    rate: BILL_DATA.rate||0,
+    dailyRate: BILL_DATA.dailyRate||0,
+    gst: BILL_DATA.gst||0,
+    transport: BILL_DATA.transport||0,
+    extra: BILL_DATA.extra||0,
+    extraDesc: BILL_DATA.extraDesc||'',
+    notes: BILL_DATA.notes||'',
+    ledgerRows: JSON.parse(JSON.stringify(BILL_DATA.ledgerRows||[])),
+    finalGrand: calcResult.finalGrand||0,
+    createdAt: Date.now()
+  };
+  await DB.set('bills', id, billToSave);
   closeModal('bill-print-modal');
   loadSavedBills();
-  alert('Bill saved!');
+  alert('Bill saved and synced to all devices! ✓');
 }
 
 function loadSavedBills(){
-  const bills = JSON.parse(localStorage.getItem('pt_bills')||'[]');
+  const bills = (CACHE.bills||[]).slice().sort((a,b)=>b.createdAt-a.createdAt);
   const el = document.getElementById('saved-bills-list');
   const cnt = document.getElementById('saved-bills-count');
-  if(cnt) cnt.textContent = bills.length+' bill'+(bills.length!==1?'s':'')+' saved';
+  if(!el) return;
+  if(cnt) cnt.textContent = bills.length+' bill'+(bills.length!==1?'s':'')+' synced';
   if(!bills.length){
-    el.innerHTML='<div class="empty" style="padding:24px"><i class="ti ti-file-invoice" style="font-size:30px;display:block;margin-bottom:8px;opacity:0.3"></i><p>No bills saved yet.</p></div>';
+    el.innerHTML='<div class="empty" style="padding:24px"><i class="ti ti-file-invoice" style="font-size:30px;display:block;margin-bottom:8px;opacity:0.3"></i><p>No bills saved yet. Bills are synced across all devices automatically.</p></div>';
     return;
   }
   el.innerHTML=`<div style="overflow:auto"><table><thead><tr><th>Bill No</th><th>Date</th><th>Customer</th><th>Site</th><th>Material</th><th>Entries</th><th>Grand Total</th><th>Actions</th></tr></thead><tbody>
   ${bills.map(b=>`<tr>
     <td style="font-size:11px;color:var(--text3)">${b.billNum||'—'}</td>
     <td>${new Date(b.createdAt).toLocaleDateString('en-IN')}</td>
-    <td><strong>${b.cname}</strong>${b.cphone?`<br><span style="font-size:11px;color:var(--text3)">${b.cphone}</span>`:''}</td>
+    <td><strong>${b.cname||'—'}</strong>${b.cphone?`<br><span style="font-size:11px;color:var(--text3)">${b.cphone}</span>`:''}</td>
     <td>${b.site||'—'}</td>
     <td>${b.material||'—'}</td>
     <td>${(b.ledgerRows||[]).length} entries</td>
-    <td style="color:var(--accent);font-weight:700;font-size:14px">₹${(b.calc?.finalGrand||0).toLocaleString('en-IN')}</td>
+    <td style="color:var(--accent);font-weight:700;font-size:14px">₹${(b.finalGrand||0).toLocaleString('en-IN')}</td>
     <td class="act">
       <button class="btn bp sm" onclick="reprintBill('${b.id}')"><i class="ti ti-printer"></i></button>
       <button class="btn bd sm" onclick="deleteSavedBill('${b.id}')"><i class="ti ti-trash"></i></button>
@@ -1542,16 +1574,16 @@ function loadSavedBills(){
 }
 
 function reprintBill(id){
-  const b = JSON.parse(localStorage.getItem('pt_bills')||'[]').find(x=>x.id===id);
-  if(!b) return;
+  const b = (CACHE.bills||[]).find(x=>x.id===id);
+  if(!b){ alert('Bill not found'); return; }
   BILL_DATA = b;
   document.getElementById('bill-printable').innerHTML = buildBillHTML(b);
   openModal('bill-print-modal');
 }
 
-function deleteSavedBill(id){
+async function deleteSavedBill(id){
   if(!confirm('Delete this saved bill?')) return;
-  localStorage.setItem('pt_bills', JSON.stringify(JSON.parse(localStorage.getItem('pt_bills')||'[]').filter(b=>b.id!==id)));
+  await DB.del('bills', id);
   loadSavedBills();
 }
 
