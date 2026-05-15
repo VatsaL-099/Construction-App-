@@ -85,6 +85,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .st{font-size:14px;font-weight:600}
 .rt th{padding:8px 10px;font-size:11px}.rt td{padding:8px 10px;font-size:12px}
 .ttr td{font-weight:700;color:var(--accent);border-top:2px solid var(--border)!important;border-bottom:none!important}
+@keyframes spin{to{transform:rotate(360deg)}}
 .site-select-box{background:var(--input);border:2px solid var(--accent);border-radius:var(--r2);padding:6px;max-height:160px;overflow-y:auto}
 .site-option{padding:8px 12px;border-radius:4px;cursor:pointer;font-size:13px;color:var(--text);transition:background 0.1s}
 .site-option:hover{background:var(--bg4)}
@@ -145,7 +146,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <div class="sidebar" id="sidebar">
-  <div class="logo"><h2>Shantilal Construction</h2><p>Chetan Dhanani</p></div>
+  <div class="logo"><h2>Shanti Construction</h2><p>Chetan Dhanani</p></div>
   <nav class="nav">
     <button class="nav-item active" onclick="nav('dashboard')"><i class="ti ti-dashboard"></i><span>Dashboard</span></button>
     <button class="nav-item" onclick="nav('clients')"><i class="ti ti-users"></i><span>Clients</span></button>
@@ -160,7 +161,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <div class="mobile-topbar">
   <button class="menu-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
-  <div class="mtitle">Shantilal Construction</div>
+  <div class="mtitle">Shanti Construction</div>
 </div>
 
 <div class="main">
@@ -216,18 +217,21 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div id="page-reports" class="page">
   <div class="ph"><h1>Reports</h1></div>
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('daily',this)">Daily</button>
+    <button class="tab active" onclick="switchTab('all',this)">All Records</button>
     <button class="tab" onclick="switchTab('weekly',this)">Weekly</button>
     <button class="tab" onclick="switchTab('monthly',this)">Monthly</button>
     <button class="tab" onclick="switchTab('client',this)">Client-wise</button>
     <button class="tab" onclick="switchTab('size',this)">Size-wise</button>
   </div>
-  <div class="frow">
-    <input id="rdate" type="date"><input id="rmonth" type="month">
-    <select id="rclient"><option value="">All Clients</option></select>
-    <button class="btn bs2" onclick="genReport()"><i class="ti ti-refresh"></i>Generate</button>
-    <button class="btn bgr" onclick="exportCSV()"><i class="ti ti-download"></i>CSV</button>
-    <button class="btn bs2" onclick="window.print()"><i class="ti ti-printer"></i>Print</button>
+  <div class="frow" style="align-items:flex-end">
+    <div style="flex:1;min-width:130px"><label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Date (Daily/Weekly)</label><input id="rdate" type="date" onchange="genReport()"></div>
+    <div style="flex:1;min-width:130px"><label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Month</label><input id="rmonth" type="month" onchange="genReport()"></div>
+    <div style="flex:1;min-width:130px"><label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Client</label><select id="rclient" onchange="genReport()"><option value="">All Clients</option></select></div>
+    <button class="btn bgr" onclick="exportCSV()"><i class="ti ti-download"></i>Export CSV</button>
+  </div>
+  <div id="report-loader" style="display:none;text-align:center;padding:32px;color:var(--text3)">
+    <div style="display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:10px"></div>
+    <div style="font-size:13px">Loading report...</div>
   </div>
   <div id="rout"></div>
 </div>
@@ -447,32 +451,199 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="mf"><button class="btn bgh" onclick="closeModal('xm')">Cancel</button><button class="btn bd" id="xok">Delete</button></div>
 </div></div>
 
-<script>
-function toggleSidebar(){
-  const sb=document.getElementById('sidebar');
-  const ov=document.getElementById('sidebar-overlay');
-  sb.classList.toggle('open');
-  ov.classList.toggle('show');
-}
-function closeSidebar(){
-  document.getElementById('sidebar')?.classList.remove('open');
-  document.getElementById('sidebar-overlay')?.classList.remove('show');
-}
-// ── DB ──
-const DB={
-  get(k){try{return JSON.parse(localStorage.getItem('pt_'+k)||'[]')}catch{return[]}},
-  set(k,v){localStorage.setItem('pt_'+k,JSON.stringify(v))},
-  clients(){return this.get('clients')},
-  sites(){return this.get('sites')},
-  works(){return this.get('works')},
-  payments(){return this.get('payments')}
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:36px;margin-bottom:8px">🏗</div>
+      <h1 style="font-size:22px;font-weight:800;color:var(--accent)">Shanti Construction</h1>
+      <p style="font-size:13px;color:var(--text3);margin-top:4px">PlateTracker — Cloud Sync</p>
+    </div>
+    <div id="login-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px"></div>
+    <div class="fg"><label>Email</label><input id="login-email" type="email" placeholder="Enter your email" autocomplete="email"></div>
+    <div class="fg"><label>Password</label><input id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn bp" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:4px" onclick="doLogin()" id="login-btn">
+      <i class="ti ti-login"></i> Sign In
+    </button>
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:16px">Secure login — syncs across all devices</p>
+  </div>
+</div>
+
+<!-- ══ SYNC STATUS BAR ══ -->
+<div id="sync-bar" style="position:fixed;top:0;left:0;right:0;height:3px;z-index:9998;background:transparent">
+  <div id="sync-progress" style="height:100%;width:0;background:var(--accent);transition:width 0.3s"></div>
+</div>
+<div id="sync-toast" style="position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--text2);z-index:9997;display:none;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4)">
+  <div id="sync-toast-icon"></div><span id="sync-toast-msg"></span>
+</div>
+
+<script type="module">
+// ══════════════════════════════════════════════
+// FIREBASE CONFIG — Shanti Developer PlateTracker
+// ══════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, enableIndexedDbPersistence, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js';
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB7iim7ah6fh69yp4nhJzS4Mj7U-2P7jkE",
+  authDomain: "plate-tracker-dbc16.firebaseapp.com",
+  projectId: "plate-tracker-dbc16",
+  storageBucket: "plate-tracker-dbc16.firebasestorage.app",
+  messagingSenderId: "546540379323",
+  appId: "1:546540379323:web:3b019e1aeb4567d0a71d9e"
 };
+
+// ══ INIT ══
+const fbApp  = initializeApp(FIREBASE_CONFIG);
+const db     = getFirestore(fbApp);
+const auth   = getAuth(fbApp);
+
+// ══ OFFLINE PERSISTENCE (works when internet drops) ══
+enableIndexedDbPersistence(db).catch(e=>{
+  if(e.code==='failed-precondition') console.warn('Persistence: multiple tabs open');
+  else if(e.code==='unimplemented') console.warn('Persistence: browser not supported');
+});
+
+// ══ IN-MEMORY CACHE (instant reads, no lag) ══
+const CACHE = { clients:[], sites:[], works:[], payments:[] };
+
+// ══ DB LAYER — drop-in replacement for old localStorage DB ══
+const DB = {
+  clients()  { return CACHE.clients  },
+  sites()    { return CACHE.sites    },
+  works()    { return CACHE.works    },
+  payments() { return CACHE.payments },
+
+  async set(col, id, data) {
+    showSync('saving');
+    try {
+      await setDoc(doc(db, col, id), { ...data, updatedAt: serverTimestamp() });
+      showSync('saved');
+    } catch(e) {
+      showSync('error'); console.error('DB.set error:', e);
+    }
+  },
+
+  async del(col, id) {
+    showSync('saving');
+    try {
+      await deleteDoc(doc(db, col, id));
+      showSync('saved');
+    } catch(e) {
+      showSync('error'); console.error('DB.del error:', e);
+    }
+  }
+};
+
+// ══ SYNC TOAST ══
+let syncTimer;
+function showSync(state) {
+  const toast = document.getElementById('sync-toast');
+  const icon  = document.getElementById('sync-toast-icon');
+  const msg   = document.getElementById('sync-toast-msg');
+  const bar   = document.getElementById('sync-progress');
+  clearTimeout(syncTimer);
+  if(state==='saving') {
+    bar.style.width='60%';
+    icon.innerHTML='<div style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite"></div>';
+    msg.textContent='Syncing...';
+    toast.style.display='flex';
+  } else if(state==='saved') {
+    bar.style.width='100%';
+    icon.innerHTML='<i class="ti ti-cloud-check" style="color:var(--green)"></i>';
+    msg.textContent='Synced ✓';
+    syncTimer=setTimeout(()=>{ toast.style.display='none'; bar.style.width='0'; }, 2000);
+  } else if(state==='error') {
+    bar.style.width='100%'; bar.style.background='var(--red)';
+    icon.innerHTML='<i class="ti ti-cloud-x" style="color:var(--red)"></i>';
+    msg.textContent='Sync failed — saved offline';
+    syncTimer=setTimeout(()=>{ toast.style.display='none'; bar.style.width='0'; bar.style.background='var(--accent)'; }, 4000);
+  }
+}
+
+// ══ REAL-TIME LISTENERS ══
+const unsubs = [];
+function attachListeners(uid) {
+  unsubs.forEach(u=>u());
+  unsubs.length=0;
+
+  const cols = ['clients','sites','works','payments'];
+  cols.forEach(col => {
+    const q = query(collection(db, col), orderBy('createdAt','asc'));
+    const unsub = onSnapshot(q, snap => {
+      CACHE[col] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Re-render current page on any remote change
+      refreshCurrentPage();
+    }, err => console.warn(`Listener error [${col}]:`, err));
+    unsubs.push(unsub);
+  });
+}
+
+function refreshCurrentPage() {
+  if(CUR==='dashboard') renderDash();
+  else if(CUR==='clients') { if(document.getElementById('cdv')?.style.display==='none'||!CID) renderClients(); else if(CID) drawClientDetail(CID); }
+  else if(CUR==='workentries') renderWorkEntries();
+  else if(CUR==='sizes') renderSizes();
+  else if(CUR==='payments') renderPayments();
+  else if(CUR==='reports') { /* user is actively filtering — don't auto-refresh */ }
+  else if(CUR==='search') globalSearch();
+}
+
+// ══ AUTH ══
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const btn   = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  errEl.style.display='none';
+  if(!email||!pass) { showLoginError('Please enter email and password'); return; }
+  btn.innerHTML='<i class="ti ti-loader" style="animation:spin 0.7s linear infinite"></i> Signing in...';
+  btn.disabled=true;
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    btn.innerHTML='<i class="ti ti-login"></i> Sign In'; btn.disabled=false;
+    const msgs = { 'auth/user-not-found':'No account found with this email.','auth/wrong-password':'Incorrect password.','auth/invalid-email':'Invalid email address.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'No internet connection.' };
+    showLoginError(msgs[e.code]||'Login failed: '+e.message);
+  }
+}
+function showLoginError(msg) {
+  const el=document.getElementById('login-error');
+  el.textContent=msg; el.style.display='block';
+  document.getElementById('login-btn').innerHTML='<i class="ti ti-login"></i> Sign In';
+  document.getElementById('login-btn').disabled=false;
+}
+async function doLogout() {
+  unsubs.forEach(u=>u()); unsubs.length=0;
+  await signOut(auth);
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+
+onAuthStateChanged(auth, user => {
+  if(user) {
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    // Show logged-in user in sidebar
+    const userEl=document.getElementById('sidebar-user');
+    if(userEl) userEl.textContent=user.email;
+    attachListeners(user.uid);
+  } else {
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
+    CACHE.clients=[]; CACHE.sites=[]; CACHE.works=[]; CACHE.payments=[];
+  }
+});
+
+// ══ HELPERS ══
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const fmt=n=>'₹'+Number(n||0).toLocaleString('en-IN');
 const fmtN=n=>Number(n||0).toLocaleString('en-IN');
 const today=()=>new Date().toISOString().slice(0,10);
 
-let CUR='dashboard',CID=null,MC=null,SC=null,SDC=null,RT='daily',RD=[],XCB=null;
+let CUR='dashboard',CID=null,MC=null,SC=null,SDC=null,RT='all',RD=[],XCB=null;
 
 // ── MODAL ──
 document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')}));
@@ -480,6 +651,8 @@ document.getElementById('xok').onclick=()=>{if(XCB)XCB();closeModal('xm');XCB=nu
 function openModal(id){document.getElementById(id).classList.add('show')}
 function closeModal(id){document.getElementById(id).classList.remove('show')}
 function confirm2(msg,cb){document.getElementById('xmsg').textContent=msg;XCB=cb;openModal('xm');}
+window.doLogin=doLogin;
+window.doLogout=doLogout;
 
 // ── NAV ──
 function nav(pg){
@@ -500,109 +673,70 @@ function nav(pg){
   else if(pg==='bill')nav_bill_init();
 }
 
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('show');
+}
+
 // ── POPULATE HELPERS ──
-function populateClientSel(id, withAll, selectedId){
+function populateClientSel(id,withAll,selectedId){
   const el=document.getElementById(id);if(!el)return;
-  el.innerHTML=(withAll?'<option value="">All Clients</option>':'')+
-    DB.clients().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(selectedId) el.value=selectedId;
+  el.innerHTML=(withAll?'<option value="">All Clients</option>':'')+DB.clients().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(selectedId)el.value=selectedId;
 }
-
-// THE KEY FIX: Direct function to fill site dropdown — no events, just called directly
-function fillSites(siteSelId, countSpanId, clientId, selectedSiteId){
+function fillSites(siteSelId,spanId,clientId,selSiteId){
   const sel=document.getElementById(siteSelId);
-  const span=document.getElementById(countSpanId);
-  if(!sel) return;
-  
-  if(!clientId){
-    sel.innerHTML='<option value="">— Select Client First —</option>';
-    if(span) span.textContent='';
-    return;
-  }
-  
+  const span=document.getElementById(spanId);
+  if(!sel)return;
+  if(!clientId){sel.innerHTML='<option value="">— Select Client First —</option>';if(span)span.textContent='';return;}
   const sites=DB.sites().filter(s=>s.clientId===clientId);
-  
-  if(sites.length===0){
-    sel.innerHTML='<option value="">— No sites found —</option>';
-    if(span) span.textContent='(0 sites)';
-    return;
-  }
-  
-  sel.innerHTML='<option value="">— Select Site —</option>'+
-    sites.map(s=>`<option value="${s.id}">${s.name}${s.location?' · '+s.location:''}</option>`).join('');
-  
-  if(span) span.textContent='('+sites.length+' site'+(sites.length>1?'s':'')+')';
-  
-  if(selectedSiteId){
-    sel.value=selectedSiteId;
-  } else if(sites.length===1){
-    // Auto-select if only one site
-    sel.value=sites[0].id;
-  }
+  if(span){span.style.color=sites.length>0?'var(--green)':'var(--red)';span.textContent=sites.length>0?`(${sites.length} site${sites.length>1?'s':''})`:'(0 sites)';}
+  if(!sites.length){sel.innerHTML='<option value="">— No sites found —</option>';return;}
+  sel.innerHTML='<option value="">— Select Site —</option>'+sites.map(s=>`<option value="${s.id}">${s.name}${s.location?' · '+s.location:''}</option>`).join('');
+  if(selSiteId)sel.value=selSiteId;
+  else if(sites.length===1)sel.value=sites[0].id;
 }
+function wcChanged(){fillSites('ws','wsite-count',document.getElementById('wc').value,null);}
+function pcChanged(){fillSites('ps','psite-count',document.getElementById('pc').value,null);}
 
-// Called by onchange on work client dropdown
-function workClientChanged(){
-  const cid=document.getElementById('wc').value;
-  fillSites('ws','wsite-count',cid,null);
-}
-
-// Called by onchange on payment client dropdown  
-function payClientChanged(){
-  const cid=document.getElementById('pc').value;
-  fillSites('ps','psite-count',cid,null);
-}
-
-// ── OPEN WORK MODAL ──
-function openWorkModal(preClientId, preSiteId){
+// ── WORK/PAYMENT MODALS ──
+function openWorkModal(preC,preS){
   document.getElementById('wmt').textContent='Add Work Entry';
   document.getElementById('ewid').value='';
-  
-  // Step 1: Fill clients
-  populateClientSel('wc', false, '');
-  
-  // Step 2: If we have a pre-selected client, set it now
-  if(preClientId){
-    document.getElementById('wc').value=preClientId;
-  }
-  
-  // Step 3: Fill sites based on current client value
-  const currentClient=document.getElementById('wc').value;
-  fillSites('ws','wsite-count',currentClient,preSiteId||null);
-  
+  populateClientSel('wc',false,'');
+  if(preC)document.getElementById('wc').value=preC;
+  fillSites('ws','wsite-count',document.getElementById('wc').value,preS||null);
   document.getElementById('wd').value=today();
   ['wl','ww2','wq','wr','wth','wrm'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('wt').value='';
   openModal('wm');
 }
-
-// ── OPEN PAYMENT MODAL ──
-function openPaymentModal(preClientId, preSiteId){
+function openPaymentModal(preC,preS){
   document.getElementById('epid').value='';
-  
-  populateClientSel('pc', false, '');
-  
-  if(preClientId){
-    document.getElementById('pc').value=preClientId;
-  }
-  
-  const currentClient=document.getElementById('pc').value;
-  fillSites('ps','psite-count',currentClient,preSiteId||null);
-  
+  populateClientSel('pc',false,'');
+  if(preC)document.getElementById('pc').value=preC;
+  fillSites('ps','psite-count',document.getElementById('pc').value,preS||null);
   document.getElementById('pd').value=today();
   document.getElementById('pa').value='';
   document.getElementById('pno').value='';
   document.getElementById('pmd').value='Cash';
   openModal('pm');
 }
-
 function calcTotal(){
   const q=Number(document.getElementById('wq').value)||0;
   const r=Number(document.getElementById('wr').value)||0;
   document.getElementById('wt').value=q&&r?q*r:'';
 }
 
-// ── CLIENTS ──
+// ══════════════════════════════════
+// CLIENTS — async Firebase
+// ══════════════════════════════════
 function openClientModal(id){
   const c=id?DB.clients().find(x=>x.id===id):null;
   document.getElementById('cmt').textContent=c?'Edit Client':'Add Client';
@@ -613,52 +747,33 @@ function openClientModal(id){
   document.getElementById('cno').value=c?.notes||'';
   openModal('cm');
 }
-function saveClient(){
-  const id=document.getElementById('ecid').value;
+async function saveClient(){
+  const id=document.getElementById('ecid').value||uid();
   const name=document.getElementById('cn').value.trim();
   const ph=document.getElementById('cph').value.trim();
-
-  if(!name){
-    alert('Client name required');
-    return;
-  }
-
-  // ✅ Phone validation (exact 10 digits)
-  if(ph && !/^\d{10}$/.test(ph)){
-    alert("Phone number must be exactly 10 digits");
-    return;
-  }
-
-  const data={
-    name,
-    phone: ph,
+  if(!name){alert('Client name required');return;}
+  if(ph&&!/^\d{10}$/.test(ph)){alert('Phone must be 10 digits');return;}
+  const existing=DB.clients().find(x=>x.id===id)||{};
+  const data={...existing, id, name, phone:ph,
     location:document.getElementById('cl').value.trim(),
-    notes:document.getElementById('cno').value.trim()
-  };
-
-  const arr=DB.clients();
-
-  if(id){
-    const i=arr.findIndex(x=>x.id===id);
-    arr[i]={...arr[i],...data};
-  } 
-  else {
-    arr.push({id:uid(),...data,createdAt:Date.now()});
-  }
-
-  DB.set('clients',arr);
+    notes:document.getElementById('cno').value.trim(),
+    createdAt:existing.createdAt||Date.now()};
+  await DB.set('clients',id,data);
   closeModal('cm');
-  renderClients();
 }
 function deleteClient(id){
-  confirm2('Delete this client and ALL related data?',()=>{
-    DB.set('clients',DB.clients().filter(c=>c.id!==id));
-    DB.set('sites',DB.sites().filter(s=>s.clientId!==id));
-    DB.set('works',DB.works().filter(w=>w.clientId!==id));
-    DB.set('payments',DB.payments().filter(p=>p.clientId!==id));
-    renderClients();
+  confirm2('Delete this client and ALL related data?',async()=>{
+    const siteIds=DB.sites().filter(s=>s.clientId===id).map(s=>s.id);
+    // Delete client
+    await DB.del('clients',id);
+    // Delete all related sites, works, payments
+    for(const s of DB.sites().filter(x=>x.clientId===id)) await DB.del('sites',s.id);
+    for(const w of DB.works().filter(x=>x.clientId===id)) await DB.del('works',w.id);
+    for(const p of DB.payments().filter(x=>x.clientId===id)) await DB.del('payments',p.id);
   });
 }
+
+// ── RENDER CLIENTS ──
 function renderClients(){
   const q=(document.getElementById('csrch')?.value||'').toLowerCase();
   const list=DB.clients().filter(c=>!q||c.name.toLowerCase().includes(q)||(c.location||'').toLowerCase().includes(q));
@@ -705,7 +820,6 @@ function drawClientDetail(cid){
   const earned=works.reduce((a,w)=>a+Number(w.total),0);
   const paid=pmts.reduce((a,p)=>a+Number(p.amount),0);
   const pending=earned-paid;
-
   const sitesH=sites.length?sites.map(s=>{
     const sw=DB.works().filter(w=>w.siteId===s.id);
     const sp=DB.payments().filter(p=>p.siteId===s.id);
@@ -732,25 +846,11 @@ function drawClientDetail(cid){
         <button class="btn bd sm" onclick="deleteSite('${s.id}')"><i class="ti ti-trash"></i></button>
       </div>
     </div>`;
-  }).join(''):'<div class="empty" style="padding:20px"><p>No sites added yet</p></div>';
-
-  const worksH=works.length
-    ?`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Site</th><th>Size</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead><tbody>
-    ${works.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{const s=DB.sites().find(x=>x.id===w.siteId);return `<tr>
-      <td>${w.date}</td><td>${s?s.name:'—'}</td>
-      <td><span class="tag">${w.length}×${w.width}ft${w.thickness?' '+w.thickness+'mm':''}</span></td>
-      <td>${fmtN(w.qty)}</td><td>${fmt(w.rate)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td>
-      <td><button class="btn bd sm" onclick="deleteWork('${w.id}')"><i class="ti ti-trash"></i></button></td></tr>`;}).join('')}
-    </tbody></table></div>`:'<div class="empty" style="padding:20px"><p>No work entries yet</p></div>';
-
-  const pmtsH=pmts.length
-    ?`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Site</th><th>Amount</th><th>Mode</th><th>Notes</th><th></th></tr></thead><tbody>
-    ${pmts.sort((a,b)=>b.date.localeCompare(a.date)).map(p=>{const s=DB.sites().find(x=>x.id===p.siteId);return `<tr>
-      <td>${p.date}</td><td>${s?s.name:'—'}</td><td style="color:var(--green);font-weight:600">${fmt(p.amount)}</td>
-      <td><span class="badge badgeb">${p.mode}</span></td><td style="color:var(--text3)">${p.notes||'—'}</td>
-      <td><button class="btn bd sm" onclick="deletePayment('${p.id}')"><i class="ti ti-trash"></i></button></td></tr>`;}).join('')}
-    </tbody></table></div>`:'<div class="empty" style="padding:20px"><p>No payments yet</p></div>';
-
+  }).join(''):'<div class="empty" style="padding:20px"><p>No sites yet.</p></div>';
+  const worksH=works.length?`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Site</th><th>Size</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead><tbody>
+    ${works.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{const s=DB.sites().find(x=>x.id===w.siteId);return `<tr><td>${w.date}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft${w.thickness?' '+w.thickness+'mm':''}</span></td><td>${fmtN(w.qty)}</td><td>${fmt(w.rate)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td><td><button class="btn bd sm" onclick="deleteWork('${w.id}')"><i class="ti ti-trash"></i></button></td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty" style="padding:20px"><p>No work entries yet</p></div>';
+  const pmtsH=pmts.length?`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Site</th><th>Amount</th><th>Mode</th><th>Notes</th><th></th></tr></thead><tbody>
+    ${pmts.sort((a,b)=>b.date.localeCompare(a.date)).map(p=>{const s=DB.sites().find(x=>x.id===p.siteId);return `<tr><td>${p.date}</td><td>${s?s.name:'—'}</td><td style="color:var(--green);font-weight:600">${fmt(p.amount)}</td><td><span class="badge badgeb">${p.mode}</span></td><td style="color:var(--text3)">${p.notes||'—'}</td><td><button class="btn bd sm" onclick="deletePayment('${p.id}')"><i class="ti ti-trash"></i></button></td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty" style="padding:20px"><p>No payments yet</p></div>';
   document.getElementById('cdc').innerHTML=`
     <div class="card">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
@@ -758,7 +858,6 @@ function drawClientDetail(cid){
           <div style="font-size:18px;font-weight:700">${c.name}</div>
           ${c.phone?`<div style="color:var(--text3);font-size:13px;margin-top:4px"><i class="ti ti-phone" style="font-size:12px"></i> ${c.phone}</div>`:''}
           ${c.location?`<div style="color:var(--text3);font-size:13px;margin-top:2px"><i class="ti ti-map-pin" style="font-size:12px"></i> ${c.location}</div>`:''}
-          ${c.notes?`<div style="color:var(--text3);font-size:12px;margin-top:4px">${c.notes}</div>`:''}
         </div>
         <button class="btn bp sm" onclick="openSiteModal(null,'${cid}')"><i class="ti ti-plus"></i> Add Site</button>
       </div>
@@ -773,7 +872,9 @@ function drawClientDetail(cid){
     <div class="card"><div class="sh"><span class="st">Payment History</span><button class="btn bgr sm" onclick="openPaymentModal('${cid}',null)"><i class="ti ti-plus"></i> Record Payment</button></div>${pmtsH}</div>`;
 }
 
-// ── SITES ──
+// ══════════════════════════════════
+// SITES — async Firebase
+// ══════════════════════════════════
 function openSiteModal(sid,cid){
   const s=sid?DB.sites().find(x=>x.id===sid):null;
   document.getElementById('smt').textContent=s?'Edit Site':'Add Site';
@@ -784,49 +885,34 @@ function openSiteModal(sid,cid){
   document.getElementById('sno').value=s?.notes||'';
   openModal('sm');
 }
-function saveSite(){
-  const id=document.getElementById('esid').value;
+async function saveSite(){
+  const sid=document.getElementById('esid').value||uid();
   const cid=document.getElementById('escid').value;
   const name=document.getElementById('sn').value.trim();
-
-  if(!cid){
-    alert("Client not selected. Please open site from a client.");
-    return;
-  }
-
-  if(!name){
-    alert('Site name required');
-    return;
-  }
-
-  const data={
-    name,
+  if(!name){alert('Site name required');return;}
+  const existing=DB.sites().find(x=>x.id===sid)||{};
+  const data={...existing, id:sid, clientId:cid, name,
     location:document.getElementById('slo').value.trim(),
-    notes:document.getElementById('sno').value.trim()
-  };
-
-  const arr=DB.sites();
-
-  if(id){
-    const i=arr.findIndex(x=>x.id===id);
-    arr[i]={...arr[i],...data};
-  } 
-  else {
-    arr.push({id:uid(),clientId:cid,...data,createdAt:Date.now()});
-  }
-
-  DB.set('sites',arr);
+    notes:document.getElementById('sno').value.trim(),
+    createdAt:existing.createdAt||Date.now()};
+  await DB.set('sites',sid,data);
   closeModal('sm');
-
-  // ✅ refresh dropdowns instantly
-  fillSites('ws','wsite-count', document.getElementById('wc')?.value, null);
-  fillSites('ps','psite-count', document.getElementById('pc')?.value, null);
-
-  if(CID) drawClientDetail(CID);
+  if(CID)drawClientDetail(CID);
 }
-// ── WORK ──
-function saveWork(){
-  const id=document.getElementById('ewid').value;
+function deleteSite(sid){
+  confirm2('Delete this site and all its entries?',async()=>{
+    await DB.del('sites',sid);
+    for(const w of DB.works().filter(x=>x.siteId===sid)) await DB.del('works',w.id);
+    for(const p of DB.payments().filter(x=>x.siteId===sid)) await DB.del('payments',p.id);
+    if(CID)drawClientDetail(CID);
+  });
+}
+
+// ══════════════════════════════════
+// WORK — async Firebase
+// ══════════════════════════════════
+async function saveWork(){
+  const id=document.getElementById('ewid').value||uid();
   const cid=document.getElementById('wc').value;
   const sid=document.getElementById('ws').value;
   const date=document.getElementById('wd').value;
@@ -837,13 +923,14 @@ function saveWork(){
   if(!cid){alert('Please select a client');return;}
   if(!sid){alert('Please select a site');return;}
   if(!date||!l||!w||!q||!r){alert('Please fill all required fields');return;}
-  const data={clientId:cid,siteId:sid,date,length:Number(l),width:Number(w),qty:Number(q),rate:Number(r),total:Number(q)*Number(r),thickness:document.getElementById('wth').value||'',remarks:document.getElementById('wrm').value||''};
-  const arr=DB.works();
-  if(id){const i=arr.findIndex(x=>x.id===id);arr[i]={...arr[i],...data};}
-  else arr.push({id:uid(),...data,createdAt:Date.now()});
-  DB.set('works',arr);closeModal('wm');
-  if(CUR==='workentries')renderWorkEntries();
-  if(CUR==='dashboard')renderDash();
+  const existing=DB.works().find(x=>x.id===id)||{};
+  const data={...existing, id, clientId:cid, siteId:sid, date, length:Number(l), width:Number(w),
+    qty:Number(q), rate:Number(r), total:Number(q)*Number(r),
+    thickness:document.getElementById('wth').value||'',
+    remarks:document.getElementById('wrm').value||'',
+    createdAt:existing.createdAt||Date.now()};
+  await DB.set('works',id,data);
+  closeModal('wm');
   if(CID)drawClientDetail(CID);
 }
 function editWork(id){
@@ -864,9 +951,8 @@ function editWork(id){
   openModal('wm');
 }
 function deleteWork(id){
-  confirm2('Delete this work entry?',()=>{
-    DB.set('works',DB.works().filter(w=>w.id!==id));
-    if(CUR==='workentries')renderWorkEntries();
+  confirm2('Delete this work entry?',async()=>{
+    await DB.del('works',id);
     if(CID)drawClientDetail(CID);
   });
 }
@@ -879,33 +965,16 @@ function renderWorkEntries(){
   if(cf)list=list.filter(w=>w.clientId===cf);
   if(df)list=list.filter(w=>w.date>=df);
   if(dt)list=list.filter(w=>w.date<=dt);
-  if(q)list=list.filter(w=>{
-    const c=DB.clients().find(x=>x.id===w.clientId);
-    const s=DB.sites().find(x=>x.id===w.siteId);
-    return (c?.name||'').toLowerCase().includes(q)||(s?.name||'').toLowerCase().includes(q)||`${w.length}x${w.width}`.includes(q)||w.date.includes(q);
-  });
+  if(q)list=list.filter(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);return (c?.name||'').toLowerCase().includes(q)||(s?.name||'').toLowerCase().includes(q)||`${w.length}x${w.width}`.includes(q)||w.date.includes(q);});
   list=list.sort((a,b)=>b.date.localeCompare(a.date));
   const tb=document.getElementById('wtb');
   if(!list.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">No entries found</td></tr>';return;}
-  tb.innerHTML=list.map(w=>{
-    const c=DB.clients().find(x=>x.id===w.clientId);
-    const s=DB.sites().find(x=>x.id===w.siteId);
-    return `<tr>
-      <td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td>
-      <td><span class="tag">${w.length}×${w.width}ft${w.thickness?' '+w.thickness+'mm':''}</span></td>
-      <td>${fmtN(w.qty)}</td><td>${fmt(w.rate)}</td>
-      <td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td>
-      <td class="act">
-        <button class="btn bgh sm" onclick="editWork('${w.id}')"><i class="ti ti-edit"></i></button>
-        <button class="btn bd sm" onclick="deleteWork('${w.id}')"><i class="ti ti-trash"></i></button>
-      </td></tr>`;
-  }).join('');
+  tb.innerHTML=list.map(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft${w.thickness?' '+w.thickness+'mm':''}</span></td><td>${fmtN(w.qty)}</td><td>${fmt(w.rate)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td><td class="act"><button class="btn bgh sm" onclick="editWork('${w.id}')"><i class="ti ti-edit"></i></button><button class="btn bd sm" onclick="deleteWork('${w.id}')"><i class="ti ti-trash"></i></button></td></tr>`;}).join('');
 }
 
 // ── SIZES ──
 function renderSizes(){
-  const map={};
-  DB.works().forEach(w=>{const k=`${w.length}×${w.width}ft`;if(!map[k])map[k]={qty:0,total:0,rates:[]};map[k].qty+=Number(w.qty);map[k].total+=Number(w.total);map[k].rates.push(Number(w.rate));});
+  const map={};DB.works().forEach(w=>{const k=`${w.length}×${w.width}ft`;if(!map[k])map[k]={qty:0,total:0,rates:[]};map[k].qty+=Number(w.qty);map[k].total+=Number(w.total);map[k].rates.push(Number(w.rate));});
   const sizes=Object.entries(map).sort((a,b)=>b[1].total-a[1].total);
   const tb=document.getElementById('sztb');
   if(!sizes.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:32px">No work entries yet</td></tr>';return;}
@@ -915,8 +984,10 @@ function renderSizes(){
   SDC=new Chart(document.getElementById('szChart'),{type:'bar',data:{labels:sizes.map(([k])=>k),datasets:[{label:'Plates',data:sizes.map(([,v])=>v.qty),backgroundColor:colors,borderRadius:4,yAxisID:'y'},{label:'Earned ₹',data:sizes.map(([,v])=>v.total),backgroundColor:colors.map(c=>c+'33'),borderColor:colors,borderWidth:1.5,borderRadius:4,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},scales:{x:{ticks:{color:'#94a3b8'},grid:{display:false}},y:{position:'left',ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.05)'}},y1:{position:'right',ticks:{color:'#94a3b8',callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{display:false}}}}});
 }
 
-// ── PAYMENTS ──
-function savePayment(){
+// ══════════════════════════════════
+// PAYMENTS — async Firebase
+// ══════════════════════════════════
+async function savePayment(){
   const cid=document.getElementById('pc').value;
   const sid=document.getElementById('ps').value;
   const date=document.getElementById('pd').value;
@@ -924,16 +995,18 @@ function savePayment(){
   if(!cid){alert('Please select a client');return;}
   if(!sid){alert('Please select a site');return;}
   if(!date||!amount){alert('Please fill date and amount');return;}
-  const arr=DB.payments();
-  arr.push({id:uid(),clientId:cid,siteId:sid,date,amount:Number(amount),mode:document.getElementById('pmd').value,notes:document.getElementById('pno').value.trim(),createdAt:Date.now()});
-  DB.set('payments',arr);closeModal('pm');
-  if(CUR==='payments')renderPayments();
+  const id=uid();
+  const data={id,clientId:cid,siteId:sid,date,amount:Number(amount),
+    mode:document.getElementById('pmd').value,
+    notes:document.getElementById('pno').value.trim(),
+    createdAt:Date.now()};
+  await DB.set('payments',id,data);
+  closeModal('pm');
   if(CID)drawClientDetail(CID);
 }
 function deletePayment(id){
-  confirm2('Delete this payment?',()=>{
-    DB.set('payments',DB.payments().filter(p=>p.id!==id));
-    if(CUR==='payments')renderPayments();
+  confirm2('Delete this payment?',async()=>{
+    await DB.del('payments',id);
     if(CID)drawClientDetail(CID);
   });
 }
@@ -949,8 +1022,7 @@ function renderPayments(){
       const total=sw.reduce((a,w)=>a+Number(w.total),0);
       const paid=sp.reduce((a,p)=>a+Number(p.amount),0);
       const pending=total-paid;const done=pending<=0;
-      if(sf==='pending'&&done)return;
-      if(sf==='completed'&&!done)return;
+      if(sf==='pending'&&done)return;if(sf==='completed'&&!done)return;
       const pct=total>0?Math.min(100,Math.round(paid/total*100)):0;
       html+=`<div class="card">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
@@ -997,271 +1069,56 @@ function renderDash(){
   if(se.length)SC=new Chart(document.getElementById('sizeChart'),{type:'doughnut',data:{labels:se.map(([k])=>k),datasets:[{data:se.map(([,v])=>v),backgroundColor:['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ef4444','#06b6d4'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11},padding:10,boxWidth:12}}}}});
   const recent=works.sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
   document.getElementById('recent-entries').innerHTML=recent.length
-    ?`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Client</th><th>Site</th><th>Size</th><th>Qty</th><th>Total</th></tr></thead><tbody>
-    ${recent.map(w=>{const c=clients.find(x=>x.id===w.clientId);const s=sites.find(x=>x.id===w.siteId);return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft</span></td><td>${fmtN(w.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td></tr>`;}).join('')}</tbody></table></div>`
-    :'<div class="empty"><i class="ti ti-clipboard-list"></i><p>No entries yet. Start by adding a client!</p></div>';
+    ?`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Client</th><th>Site</th><th>Size</th><th>Qty</th><th>Total</th></tr></thead><tbody>${recent.map(w=>{const c=clients.find(x=>x.id===w.clientId);const s=sites.find(x=>x.id===w.siteId);return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft</span></td><td>${fmtN(w.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td></tr>`;}).join('')}</tbody></table></div>`
+    :'<div class="empty"><i class="ti ti-clipboard-list"></i><p>No entries yet.</p></div>';
 }
 
 // ── REPORTS ──
-function initReports(){populateClientSel('rclient',true,'');document.getElementById('rdate').value=today();document.getElementById('rmonth').value=today().slice(0,7);genReport();}
+function initReports(){
+  populateClientSel('rclient',true,'');
+  document.getElementById('rdate').value='';
+  document.getElementById('rmonth').value='';
+  RT='all';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.tab')?.classList.add('active');
+  genReport();
+}
 function switchTab(tab,el){RT=tab;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');genReport();}
-function genReport(){
-  let works = DB.works();
-
-  const cf = document.getElementById('rclient')?.value || '';
-  if(cf) works = works.filter(w => w.clientId === cf);
-
-  if(RT === 'daily'){
-    const d = document.getElementById('rdate').value;
-    if(d) works = works.filter(w => w.date === d);
-  }
-  else if(RT === 'weekly'){
-    const d = new Date(document.getElementById('rdate').value || today());
-    const s = new Date(d);
-    s.setDate(d.getDate() - d.getDay());
-    const e = new Date(s);
-    e.setDate(s.getDate() + 6);
-
-    const s0 = s.toISOString().slice(0,10);
-    const e0 = e.toISOString().slice(0,10);
-
-    works = works.filter(w => w.date >= s0 && w.date <= e0);
-  }
-  else if(RT === 'monthly'){
-    const m = document.getElementById('rmonth').value;
-    if(m) works = works.filter(w => w.date.startsWith(m));
-  }
-
-  RD = works;
-
-  // Totals
-  const tq = works.reduce((a,w)=>a+Number(w.qty),0);
-  const ta = works.reduce((a,w)=>a+Number(w.total),0);
-
-  // ✅ calculate received amount (paid) properly (no duplicate counting)
-  let paidAmount = 0;
-  const siteIds = [...new Set(works.map(w => w.siteId))];
-
-  siteIds.forEach(siteId=>{
-    const sitePayments = DB.payments().filter(p => p.siteId === siteId);
-    paidAmount += sitePayments.reduce((a,p)=>a+Number(p.amount),0);
-  });
-
-  const pendingAmount = ta - paidAmount;
-
-  // CLIENT REPORT
-  if(RT === 'client'){
-    const g = {};
-    works.forEach(w=>{
-      const c = DB.clients().find(x=>x.id===w.clientId);
-      const n = c ? c.name : 'Unknown';
-      if(!g[n]) g[n] = {qty:0,total:0};
-      g[n].qty += Number(w.qty);
-      g[n].total += Number(w.total);
-    });
-
-    document.getElementById('rout').innerHTML = `
-      <div class="card" style="padding:0;overflow:auto">
-        <table class="rt">
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Plates</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${Object.entries(g)
-              .sort((a,b)=>b[1].total-a[1].total)
-              .map(([n,v])=>`
-                <tr>
-                  <td>${n}</td>
-                  <td>${fmtN(v.qty)}</td>
-                  <td style="color:var(--accent);font-weight:600">${fmt(v.total)}</td>
-                </tr>
-              `).join('')}
-            <tr class="ttr">
-              <td>Total</td>
-              <td>${fmtN(tq)}</td>
-              <td>${fmt(ta)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  // SIZE REPORT
-  else if(RT === 'size'){
-    const g = {};
-    works.forEach(w=>{
-      const k = `${w.length}×${w.width}ft`;
-      if(!g[k]) g[k] = {qty:0,total:0};
-      g[k].qty += Number(w.qty);
-      g[k].total += Number(w.total);
-    });
-
-    document.getElementById('rout').innerHTML = `
-      <div class="card" style="padding:0;overflow:auto">
-        <table class="rt">
-          <thead>
-            <tr>
-              <th>Size</th>
-              <th>Qty</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${Object.entries(g)
-              .sort((a,b)=>b[1].qty-a[1].qty)
-              .map(([k,v])=>`
-                <tr>
-                  <td><span class="tag">${k}</span></td>
-                  <td>${fmtN(v.qty)}</td>
-                  <td style="color:var(--accent);font-weight:600">${fmt(v.total)}</td>
-                </tr>
-              `).join('')}
-            <tr class="ttr">
-              <td>Total</td>
-              <td>${fmtN(tq)}</td>
-              <td>${fmt(ta)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  // DAILY / WEEKLY / MONTHLY REPORT
-  else {
-    document.getElementById('rout').innerHTML = `
-
-      <!-- ✅ Summary Card -->
-      <div class="card" style="margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="font-size:14px;font-weight:600;color:var(--text2)">Report Summary</div>
-          <div style="font-size:11px;color:var(--text3)">Based on selected report</div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">
-              Entries
-            </div>
-            <div style="font-size:20px;font-weight:700;color:var(--accent)">
-              ${works.length}
-            </div>
-          </div>
-
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">
-              Plates
-            </div>
-            <div style="font-size:20px;font-weight:700;color:var(--accent)">
-              ${fmtN(tq)}
-            </div>
-          </div>
-        </div>
-
-        <!-- ✅ KEEP THESE SAME POSITION (Received + Pending) -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">
-              Received
-            </div>
-            <div style="font-size:20px;font-weight:700;color:var(--green)">
-              ${fmt(paidAmount)}
-            </div>
-          </div>
-
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px">
-            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">
-              Pending
-            </div>
-            <div style="font-size:20px;font-weight:700;color:var(--red)">
-              ${fmt(Math.max(0,pendingAmount))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ✅ Report Table -->
-      <div class="card" style="padding:0;overflow:auto">
-        <table class="rt">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Client</th>
-              <th>Site</th>
-              <th>Size</th>
-              <th>Qty</th>
-              <th>Rate</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${works.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{
-              const c = DB.clients().find(x=>x.id===w.clientId);
-              const s = DB.sites().find(x=>x.id===w.siteId);
-
-              return `
-                <tr>
-                  <td>${w.date}</td>
-                  <td>${c?c.name:'—'}</td>
-                  <td>${s?s.name:'—'}</td>
-                  <td><span class="tag">${w.length}×${w.width}ft</span></td>
-                  <td>${fmtN(w.qty)}</td>
-                  <td>${fmt(w.rate)}</td>
-                  <td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td>
-                </tr>
-              `;
-            }).join('')}
-
-            <tr class="ttr">
-              <td colspan="4">Total</td>
-              <td>${fmtN(tq)}</td>
-              <td>—</td>
-              <td>${fmt(ta)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
+function showReportLoader(show){const loader=document.getElementById('report-loader');const out=document.getElementById('rout');if(!loader||!out)return;if(show){loader.style.display='block';out.style.display='none';}else{loader.style.display='none';out.style.display='block';}}
+function genReport(){showReportLoader(true);setTimeout(()=>{try{_runGenReport();}catch(e){console.error(e);}showReportLoader(false);},350);}
+function _runGenReport(){
+  let works=DB.works();
+  const cf=document.getElementById('rclient')?.value||'';
+  if(cf)works=works.filter(w=>w.clientId===cf);
+  const rdateVal=document.getElementById('rdate').value;
+  const rmonthVal=document.getElementById('rmonth').value;
+  if(RT==='all'){}
+  else if(RT==='daily'){if(!rdateVal){works=[];}else works=works.filter(w=>w.date===rdateVal);}
+  else if(RT==='weekly'){if(!rdateVal){works=[];}else{const d=new Date(rdateVal);const s=new Date(d);s.setDate(d.getDate()-d.getDay());const e=new Date(s);e.setDate(s.getDate()+6);const s0=s.toISOString().slice(0,10),e0=e.toISOString().slice(0,10);works=works.filter(w=>w.date>=s0&&w.date<=e0);}}
+  else if(RT==='monthly'){if(!rmonthVal){works=[];}else works=works.filter(w=>w.date.startsWith(rmonthVal));}
+  RD=works;
+  const tq=works.reduce((a,w)=>a+Number(w.qty),0),ta=works.reduce((a,w)=>a+Number(w.total),0);
+  const siteIds=[...new Set(works.map(w=>w.siteId))];
+  let paidAmount=0;siteIds.forEach(sid=>{paidAmount+=DB.payments().filter(p=>p.siteId===sid).reduce((a,p)=>a+Number(p.amount),0);});
+  const pendingAmount=ta-paidAmount;
+  if(works.length===0){let hint='No records match.';if(RT==='all')hint='No work entries found.';else if((RT==='daily'||RT==='weekly')&&!rdateVal)hint='Please select a date above.';else if(RT==='monthly'&&!rmonthVal)hint='Please select a month above.';document.getElementById('rout').innerHTML=`<div class="empty"><i class="ti ti-file-analytics" style="font-size:36px;display:block;margin-bottom:10px;opacity:0.3"></i><p>${hint}</p></div>`;return;}
+  if(RT==='client'){const g={};works.forEach(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const n=c?c.name:'Unknown';if(!g[n])g[n]={qty:0,total:0};g[n].qty+=Number(w.qty);g[n].total+=Number(w.total);});document.getElementById('rout').innerHTML=`<div class="card" style="padding:0;overflow:auto"><table class="rt"><thead><tr><th>Client</th><th>Plates</th><th>Total</th></tr></thead><tbody>${Object.entries(g).sort((a,b)=>b[1].total-a[1].total).map(([n,v])=>`<tr><td>${n}</td><td>${fmtN(v.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(v.total)}</td></tr>`).join('')}<tr class="ttr"><td>Total</td><td>${fmtN(tq)}</td><td>${fmt(ta)}</td></tr></tbody></table></div>`;}
+  else if(RT==='size'){const g={};works.forEach(w=>{const k=`${w.length}×${w.width}ft`;if(!g[k])g[k]={qty:0,total:0};g[k].qty+=Number(w.qty);g[k].total+=Number(w.total);});document.getElementById('rout').innerHTML=`<div class="card" style="padding:0;overflow:auto"><table class="rt"><thead><tr><th>Size</th><th>Qty</th><th>Total</th></tr></thead><tbody>${Object.entries(g).sort((a,b)=>b[1].qty-a[1].qty).map(([k,v])=>`<tr><td><span class="tag">${k}</span></td><td>${fmtN(v.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(v.total)}</td></tr>`).join('')}<tr class="ttr"><td>Total</td><td>${fmtN(tq)}</td><td>${fmt(ta)}</td></tr></tbody></table></div>`;}
+  else{document.getElementById('rout').innerHTML=`<div class="stats-grid" style="margin-bottom:16px"><div class="sc a"><div class="sl">Entries</div><div class="sv">${works.length}</div></div><div class="sc p"><div class="sl">Plates</div><div class="sv">${fmtN(tq)}</div></div><div class="sc g"><div class="sl">Earned</div><div class="sv" style="font-size:16px">${fmt(ta)}</div></div><div class="sc r"><div class="sl">Pending</div><div class="sv" style="font-size:16px">${fmt(Math.max(0,pendingAmount))}</div></div></div><div class="card" style="padding:0;overflow:auto"><table class="rt"><thead><tr><th>Date</th><th>Client</th><th>Site</th><th>Size</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${works.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft</span></td><td>${fmtN(w.qty)}</td><td>${fmt(w.rate)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td></tr>`;}).join('')}<tr class="ttr"><td colspan="4">Total</td><td>${fmtN(tq)}</td><td>—</td><td>${fmt(ta)}</td></tr></tbody></table></div>`;}
 }
-
-function exportCSV(){
-  if(!RD.length){alert('No data to export');return;}
-  const rows=[['Date','Client','Site','Length(ft)','Width(ft)','Thickness(mm)','Qty','Rate','Total','Remarks']];
-  RD.forEach(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);rows.push([w.date,c?c.name:'',s?s.name:'',w.length,w.width,w.thickness||'',w.qty,w.rate,w.total,w.remarks||'']);});
-  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:'plate_report.csv'}).click();
-}
+function exportCSV(){if(!RD.length){alert('No data to export');return;}const rows=[['Date','Client','Site','Length(ft)','Width(ft)','Thickness(mm)','Qty','Rate','Total','Remarks']];RD.forEach(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);rows.push([w.date,c?c.name:'',s?s.name:'',w.length,w.width,w.thickness||'',w.qty,w.rate,w.total,w.remarks||'']);});const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:'plate_report.csv'}).click();}
 
 // ── SEARCH ──
-function initSearch(){
-  const sizes=[...new Set(DB.works().map(w=>`${w.length}×${w.width}ft`))].sort();
-  document.getElementById('gssz').innerHTML='<option value="">All Sizes</option>'+sizes.map(s=>`<option value="${s}">${s}</option>`).join('');
-  globalSearch();
-}
+function initSearch(){const sizes=[...new Set(DB.works().map(w=>`${w.length}×${w.width}ft`))].sort();document.getElementById('gssz').innerHTML='<option value="">All Sizes</option>'+sizes.map(s=>`<option value="${s}">${s}</option>`).join('');globalSearch();}
 function globalSearch(){
-  const q=(document.getElementById('gsq')?.value||'').toLowerCase();
-  const sf=document.getElementById('gsf')?.value||'';
-  const sz=document.getElementById('gssz')?.value||'';
-  const df=document.getElementById('gsdf')?.value||'';
-  const dt=document.getElementById('gsdt')?.value||'';
-  const ss={};
-  DB.sites().forEach(s=>{const sw=DB.works().filter(w=>w.siteId===s.id);const sp=DB.payments().filter(p=>p.siteId===s.id);ss[s.id]=(sw.reduce((a,w)=>a+Number(w.total),0)-sp.reduce((a,p)=>a+Number(p.amount),0))>0?'pending':'completed';});
+  const q=(document.getElementById('gsq')?.value||'').toLowerCase();const sf=document.getElementById('gsf')?.value||'';const sz=document.getElementById('gssz')?.value||'';const df=document.getElementById('gsdf')?.value||'';const dt=document.getElementById('gsdt')?.value||'';
+  const ss={};DB.sites().forEach(s=>{const sw=DB.works().filter(w=>w.siteId===s.id);const sp=DB.payments().filter(p=>p.siteId===s.id);ss[s.id]=(sw.reduce((a,w)=>a+Number(w.total),0)-sp.reduce((a,p)=>a+Number(p.amount),0))>0?'pending':'completed';});
   let list=DB.works();
   if(q)list=list.filter(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);return (c?.name||'').toLowerCase().includes(q)||(s?.name||'').toLowerCase().includes(q)||w.date.includes(q)||(`${w.length}x${w.width}`).includes(q.replace('×','x'));});
-  if(sz)list=list.filter(w=>`${w.length}×${w.width}ft`===sz);
-  if(df)list=list.filter(w=>w.date>=df);
-  if(dt)list=list.filter(w=>w.date<=dt);
-  if(sf)list=list.filter(w=>ss[w.siteId]===sf);
+  if(sz)list=list.filter(w=>`${w.length}×${w.width}ft`===sz);if(df)list=list.filter(w=>w.date>=df);if(dt)list=list.filter(w=>w.date<=dt);if(sf)list=list.filter(w=>ss[w.siteId]===sf);
   const el=document.getElementById('gsout');
   if(!list.length){el.innerHTML='<div class="empty"><i class="ti ti-search"></i><p>No results found</p></div>';return;}
-  el.innerHTML=`<div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Date</th><th>Client</th><th>Site</th><th>Size</th><th>Qty</th><th>Total</th><th>Status</th></tr></thead><tbody>
-  ${list.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);const ip=ss[w.siteId]==='pending';return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft</span></td><td>${fmtN(w.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td><td><span class="badge ${ip?'badger':'badgeg'}">${ip?'Pending':'Paid'}</span></td></tr>`;}).join('')}</tbody></table></div>`;
+  el.innerHTML=`<div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Date</th><th>Client</th><th>Site</th><th>Size</th><th>Qty</th><th>Total</th><th>Status</th></tr></thead><tbody>${list.sort((a,b)=>b.date.localeCompare(a.date)).map(w=>{const c=DB.clients().find(x=>x.id===w.clientId);const s=DB.sites().find(x=>x.id===w.siteId);const ip=ss[w.siteId]==='pending';return `<tr><td>${w.date}</td><td>${c?c.name:'—'}</td><td>${s?s.name:'—'}</td><td><span class="tag">${w.length}×${w.width}ft</span></td><td>${fmtN(w.qty)}</td><td style="color:var(--accent);font-weight:600">${fmt(w.total)}</td><td><span class="badge ${ip?'badger':'badgeg'}">${ip?'Pending':'Paid'}</span></td></tr>`;}).join('')}</tbody></table></div>`;
 }
 
 // ── BILL GENERATOR — SHANTI DEVELOPER ──
@@ -1732,8 +1589,54 @@ function seedDemo(){
   ]);
 }
 
-seedDemo();
-renderDash();
+// ── EXPOSE GLOBALS (needed for onclick handlers in HTML) ──
+window.nav=nav;
+window.toggleSidebar=toggleSidebar;
+window.closeSidebar=closeSidebar;
+window.openModal=openModal;
+window.closeModal=closeModal;
+window.openClientModal=openClientModal;
+window.saveClient=saveClient;
+window.deleteClient=deleteClient;
+window.renderClients=renderClients;
+window.showClientDetail=showClientDetail;
+window.showClientList=showClientList;
+window.openSiteModal=openSiteModal;
+window.saveSite=saveSite;
+window.deleteSite=deleteSite;
+window.openWorkModal=openWorkModal;
+window.saveWork=saveWork;
+window.editWork=editWork;
+window.deleteWork=deleteWork;
+window.renderWorkEntries=renderWorkEntries;
+window.openPaymentModal=openPaymentModal;
+window.savePayment=savePayment;
+window.deletePayment=deletePayment;
+window.renderPayments=renderPayments;
+window.wcChanged=wcChanged;
+window.pcChanged=pcChanged;
+window.calcTotal=calcTotal;
+window.populateClientSel=populateClientSel;
+window.fillSites=fillSites;
+window.switchTab=switchTab;
+window.genReport=genReport;
+window.exportCSV=exportCSV;
+window.initSearch=initSearch;
+window.globalSearch=globalSearch;
+window.nav_bill_init=nav_bill_init;
+window.addLedgerRow=addLedgerRow;
+window.removeLedgerRow=removeLedgerRow;
+window.ledgerRowChanged=ledgerRowChanged;
+window.renderLedger=renderLedger;
+window.previewBill=previewBill;
+window.printBillDirect=printBillDirect;
+window.saveBillRecord=saveBillRecord;
+window.reprintBill=reprintBill;
+window.deleteSavedBill=deleteSavedBill;
+window.resetBill=resetBill;
+window.doPrint=doPrint;
+window.confirm2=confirm2;
+
 </script>
 </body>
 </html>
